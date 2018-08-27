@@ -1,5 +1,5 @@
 [package]
-name = "1password"
+name = "_1password"
 version = "0.1.0"
 authors = ["Brian Olsen <brian@maven-group.org>"]
 license = "MIT"

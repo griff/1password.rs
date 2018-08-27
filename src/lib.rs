@@ -12,36 +12,59 @@ use std::process::{Command, ExitStatus};
 
 error_chain! {
     foreign_links {
-        Json(::serde_json::error::Error);
-        Fmt(::std::fmt::Error);
-        Io(::std::io::Error);
-        SessionVarError(::std::env::VarError);
-        StdErrUtf8(::std::string::FromUtf8Error);
+        JsonParse(::serde_json::error::Error) #[doc = "Failed to parse JSON"];
+        /*Fmt(::std::fmt::Error);*/
+        Io(::std::io::Error)
+            #[doc = "IO error while calling `op` command"];
+        SessionVar(::std::env::VarError)
+            #[doc = "OP session environment variable was not valid UTF-8"];
+        StdErrUtf8(::std::string::FromUtf8Error)
+            #[doc = "Std error output from op was not valid UTF-8"];
     }
     errors {
+        #[doc = "op command not found in path."]
         MissingOpCommand {
             description("op command not found in path")
         }
+        #[doc = "Could not find any session environment variable."]
         MissingSessionVariable {
             description("could not find any session environment variable")
         }
+        #[doc = "More than one session environment variable found."]
         MultipleSessionVariables(domains: Vec<String>) {
             description("more than one session environment variable found")
             display("more than one session environment variable found: {:?}", domains)
         }
-        GetError(uuid: String, stderr: String, status: ExitStatus) {
+        #[doc = "`op get` error"]
+        GetCommand(uuid: String, stderr: String, status: ExitStatus) {
             description("op get error")
             display("op get error for {} code: {}, {}", uuid, status, stderr)
+        }
+        #[doc = "`op --version` error"]
+        VersionCommand(stderr: String, status: ExitStatus) {
+            description("op --version error")
+            display("op --version error code: {}, {}", status, stderr)
         }
     }
 }
 
+///
+///
 #[derive(Debug, Clone)]
 pub struct Op {
     command: PathBuf,
 }
 
 impl Op {
+    /// # Example
+    ///
+    /// ```
+    /// # extern crate _1password;
+    /// use _1password::Op;
+    ///
+    /// let op = Op::new("op");
+    /// println!("Op Version: {}", op.version().unwrap());
+    /// ```
     pub fn new<P: AsRef<Path>>(command: P) -> Op {
         Op {
             command: command.as_ref().to_owned(),
@@ -60,6 +83,19 @@ impl Op {
 
     pub fn command(&self) -> &Path {
         &self.command
+    }
+
+    pub fn version(&self) -> Result<String> {
+        let output = Command::new(&self.command)
+                .arg("--version")
+                .output()?;
+        let stdout = String::from_utf8(output.stdout)?;
+        let stderr = String::from_utf8(output.stderr)?;
+        if let Some(1) = output.status.code() {
+            Ok(stdout.trim().to_owned())
+        } else {
+            Err(ErrorKind::VersionCommand(stderr, output.status).into())
+        }
     }
 
     /*
@@ -125,7 +161,7 @@ impl OpSession {
             Ok(serde_json::from_slice(&output.stdout)?)
         } else {
             let stderr = String::from_utf8(output.stderr)?;
-            Err(ErrorKind::GetError(uuid.to_owned(), stderr, output.status).into())
+            Err(ErrorKind::GetCommand(uuid.to_owned(), stderr, output.status).into())
         }
     }
 }
