@@ -1,9 +1,12 @@
 [package]
-name = "_1password"
+name = "1password"
 version = "0.1.0"
 authors = ["Brian Olsen <brian@maven-group.org>"]
 license = "MIT"
 repository = "https://github.com/griff/1password.rs"
+
+[lib]
+name = "_1password"
 
 [dependencies]
 error-chain = "0.11"
