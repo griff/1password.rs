@@ -13,7 +13,6 @@ use std::process::{Command, ExitStatus};
 error_chain! {
     foreign_links {
         JsonParse(::serde_json::error::Error) #[doc = "Failed to parse JSON"];
-        /*Fmt(::std::fmt::Error);*/
         Io(::std::io::Error)
             #[doc = "IO error while calling `op` command"];
         SessionVar(::std::env::VarError)
@@ -71,6 +70,17 @@ impl Op {
         }
     }
 
+    /// Find `op` command line utility by search the current PATH environment variable.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// # extern crate _1password;
+    /// use _1password::Op;
+    ///
+    /// let op = Op::which().unwrap();
+    /// println!("Op Version: {}", op.version().unwrap());
+    /// ```
     pub fn which() -> Result<Op> {
         if let Ok(p) = which::which("op") {
             Ok(Op {
@@ -81,10 +91,12 @@ impl Op {
         }
     }
 
+    /// Path to `op` command
     pub fn command(&self) -> &Path {
         &self.command
     }
 
+    /// Returns version of `op` that this struct uses.
     pub fn version(&self) -> Result<String> {
         let output = Command::new(&self.command)
                 .arg("--version")
@@ -99,15 +111,16 @@ impl Op {
     }
 
     /*
-    pub fn signin_subdomain(&self, subdomain: &str) -> OpSession {
+    pub fn signin_subdomain(&self, subdomain: &str, password: &str) -> OpSession {
 
     }
 
-    pub fn signin(&self, signinaddress: &str, emailaddress: &str, secretkey: &str) -> OpSession {
+    pub fn signin(&self, signinaddress: &str, emailaddress: &str, secretkey: &str, password: &str) -> OpSession {
 
     }
     */
 
+    /// Make new session with the specified session token.
     pub fn session(&self, session: &str) -> OpSession {
         OpSession {
             config: self.clone(),
@@ -115,6 +128,9 @@ impl Op {
         }
     }
 
+    /// Lookup session token for the supplied subdomain in environment.
+    /// This will look for an environment variable named `OP_SESSION_<subdomain>` and if found
+    /// will return a new session that uses the session token stored in that environment variable.
     pub fn env_account_session(&self, subdomain: &str) -> Result<OpSession> {
         match env::var(format!("OP_SESSION_{}", subdomain)) {
             Err(env::VarError::NotPresent) => Err(ErrorKind::MissingSessionVariable.into()),
@@ -126,6 +142,12 @@ impl Op {
         }
     }
 
+    /// Lookup session token in environment.
+    /// This will look for any environment variables matching the pattern `OP_SESSION_*` and if
+    /// found will return a new session that uses the session token stored in that environment
+    /// variable.
+    ///
+    /// If more than one environment variable matching the pattern is found and error is returned.
     pub fn env_session(&self) -> Result<OpSession> {
         let vars : Vec<(String,String)> = env::vars().filter(|(key, _)| key.starts_with("OP_SESSION_") ).collect();
         match vars.len() {
@@ -144,6 +166,7 @@ impl Op {
     }
 }
 
+/// A configured session what can be used to actually lookup information in 1Password.
 #[derive(Debug, Clone)]
 pub struct OpSession {
     config: Op,
@@ -151,6 +174,9 @@ pub struct OpSession {
 }
 
 impl OpSession {
+    /// Get item with specified UUID.
+    ///
+    /// This calls `op get item` and parses the returned JSON.
     pub fn get_item(&self, uuid: &str) -> Result<OpItem> {
         let output = Command::new(&self.config.command)
                 .args(&["get", "item", "--session"])
@@ -168,17 +194,17 @@ impl OpSession {
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OpItemOverview {
-    ainfo: String,
-    title: String
+    pub ainfo: String,
+    pub title: String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct OpItemField {
-    designation: Option<String>,
-    name: String,
+    pub designation: Option<String>,
+    pub name: String,
     #[serde(rename="type")]
-    field_type: String,
-    value: String
+    pub field_type: String,
+    pub value: String
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -188,17 +214,19 @@ pub enum OpItemDetails {
     Login { fields: Vec<OpItemField> },
 }
 
+/// Item returned from `OpSession::get_item`
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct OpItem {
-    uuid: String,
-    vault_uuid: String,
-    changer_uuid: String,
-    overview: OpItemOverview,
-    details: OpItemDetails,
+    pub uuid: String,
+    pub vault_uuid: String,
+    pub changer_uuid: String,
+    pub overview: OpItemOverview,
+    pub details: OpItemDetails,
 }
 
 impl OpItem {
+    /// Return password of this item if any.
     pub fn password(&self) -> Option<String> {
         match &self.details {
             &OpItemDetails::Password{ ref password } => Some(password.clone()),
