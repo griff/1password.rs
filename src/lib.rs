@@ -179,8 +179,8 @@ impl OpSession {
     /// This calls `op get item` and parses the returned JSON.
     pub fn get_item(&self, uuid: &str) -> Result<OpItem> {
         let output = Command::new(&self.config.command)
-                .args(&["get", "item", "--session"])
-                .arg(&self.session)
+                .args(&["get", "item"])
+                .arg(format!("--session={}", self.session))
                 .arg(&uuid)
                 .output()?;
         if output.status.success() {
