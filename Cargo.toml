@@ -10,9 +10,6 @@ documentation = "https://docs.rs/one_password"
 keywords = ["1password", "op"]
 categories = ["api-bindings"]
 
-[lib]
-name = "one_password"
-
 [dependencies]
 error-chain = "0.12"
 serde = "1.0"
