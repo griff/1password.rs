@@ -1,17 +1,17 @@
 [package]
-name = "1password"
+name = "one_password"
 version = "0.1.0"
 description = "Rust wrapper for 1password op command line utility"
 authors = ["Brian Olsen <brian@maven-group.org>"]
 license = "MIT"
 repository = "https://github.com/griff/1password.rs"
 readme = "README.md"
-documentation = "https://docs.rs/1password"
+documentation = "https://docs.rs/one_password"
 keywords = ["1password", "op"]
 categories = ["api-bindings"]
 
 [lib]
-name = "_1password"
+name = "one_password"
 
 [dependencies]
 error-chain = "0.12"
